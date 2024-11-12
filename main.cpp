@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <cmath>
@@ -7,6 +8,7 @@
 #include <cstdlib>
 #include <chrono>
 
+using namespace std;
 // Struct for storing point data
 struct Point {
     int id;
@@ -15,58 +17,81 @@ struct Point {
     Point(int id, double x, double y) : id(id), x(x), y(y) {}
 };
 
+// Struct for a dataset
+struct Dataset {
+    string name;
+    vector<Point> points;
+    Dataset(string name, vector<Point> &&points) : name(name), points(points) {}
+};
+
+
 // Function to calculate Euclidean distance between two points
 double calculateDistance(const Point& a, const Point& b) 
 {
-    return std::round(std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)));
+    return round(sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)));
 }
 
-// Load data points from a dataset file
-std::vector<Point> loadDataset(const std::string& filename) 
-{
-    std::vector<Point> points;
+Dataset parseTSPFile(const std::string& filename) {
     std::ifstream file(filename);
-    
-    if (file.is_open()) 
-    {
-        int id;
-        double x, y;
-        while (file >> id >> x >> y) {
-            points.emplace_back(id, x, y);
-        }
-        file.close();
-    } else {
+    std::string line;
+    std::string name;
+    std::vector<Point> points;
+
+    if (!file.is_open()) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
+        return Dataset("", {});
     }
-    
-    return points;
+
+    while (std::getline(file, line)) {
+        // Parse the name
+        if (line.rfind("NAME", 0) == 0) {
+            std::istringstream iss(line);
+            std::string discard;
+            iss >> discard >> name;
+        }
+        
+        // Start reading points after the NODE_COORD_SECTION line
+        else if (line == "NODE_COORD_SECTION") {
+            while (std::getline(file, line) && line != "EOF") {
+                std::istringstream iss(line);
+                int id;
+                double x, y;
+                if (iss >> id >> x >> y) {
+                    points.emplace_back(id, x, y);
+                }
+            }
+        }
+    }
+
+    file.close();
+    return Dataset(name, std::move(points));
 }
 
 // Placeholder for exact algorithm (brute-force)
-std::vector<int> exactAlgorithm(const std::vector<Point>& points, int timeLimit) {
+vector<int> exactAlgorithm(const vector<Point>& points, int timeLimit) {
     // Implement brute-force algorithm here
     // Placeholder for result
     return {0}; // Replace with computed tour
 }
 
 // Placeholder for approximation algorithm (MST-based 2-approximation)
-std::vector<int> approximateAlgorithm(const std::vector<Point>& points) {
+vector<int> approximateAlgorithm(const vector<Point>& points) {
     // Implement 2-approximation algorithm here
     // Placeholder for result
     return {0}; // Replace with computed tour
 }
 
 // Placeholder for local search algorithm (e.g., Simulated Annealing)
-std::vector<int> localSearchAlgorithm(const std::vector<Point>& points, int timeLimit, int seed) {
+vector<int> localSearchAlgorithm(const vector<Point>& points, int timeLimit, int seed) {
     // Implement local search algorithm here
     // Placeholder for result
     return {0}; // Replace with computed tour
 }
 
 // Function to save solution to file
-void saveSolution(const std::string& instance, const std::string& method, int timeLimit, int seed, double quality, const std::vector<int>& tour) {
-    std::string filename = instance + " " + method + " " + std::to_string(timeLimit) + (method == "LS" ? " " + std::to_string(seed) : "") + ".sol";
-    std::ofstream outFile(filename);
+void saveSolution(const string& instance, const string& method, int timeLimit, int seed, double quality, const vector<int>& tour) {
+    string filename = instance + " " + method + " " + to_string(timeLimit) + (method == "LS" ? " " + to_string(seed) : "") + ".sol";
+    ofstream outFile(filename);
     
     if (outFile.is_open()) {
         outFile << quality << "\n";
@@ -74,49 +99,49 @@ void saveSolution(const std::string& instance, const std::string& method, int ti
             outFile << tour[i] << (i < tour.size() - 1 ? "," : "");
         }
         outFile.close();
-        std::cout << "Solution saved to " << filename << std::endl;
+        cout << "Solution saved to " << filename << endl;
     } else {
-        std::cerr << "Error: Unable to open file " << filename << " for writing." << std::endl;
+        cerr << "Error: Unable to open file " << filename << " for writing." << endl;
     }
 }
 
 // Main function to handle input and select algorithm
 int main(int argc, char* argv[]) {
     if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <filename> <method> <timeLimit> [seed]" << std::endl;
+        cerr << "Usage: " << argv[0] << " <filename> <method> <timeLimit> [seed]" << endl;
         return 1;
     }
     
-    std::string filename = argv[1];
-    std::string method = argv[2];
-    int timeLimit = std::atoi(argv[3]);
-    int seed = argc == 5 ? std::atoi(argv[4]) : 0;
+    string filename = argv[1];
+    string method = argv[2];
+    int timeLimit = atoi(argv[3]);
+    int seed = argc == 5 ? atoi(argv[4]) : 0;
     
     // Load dataset
-    std::vector<Point> points = loadDataset(filename);
+    Dataset dataset = parseTSPFile(filename);
     
     // Select and run the algorithm
-    std::vector<int> tour;
-    double quality = std::numeric_limits<double>::max();
+    vector<int> tour;
+    double quality = numeric_limits<double>::max();
     
     if (method == "BF") 
     {
-        tour = exactAlgorithm(points, timeLimit);
+        tour = exactAlgorithm(dataset.points, timeLimit);
         quality = 0; // Set this to the computed solution quality
     } 
     else if (method == "Approx") 
     {
-        tour = approximateAlgorithm(points);
+        tour = approximateAlgorithm(dataset.points);
         quality = 0; // Set this to the computed solution quality
     } 
     else if (method == "LS") 
     {
-        tour = localSearchAlgorithm(points, timeLimit, seed);
+        tour = localSearchAlgorithm(dataset.points, timeLimit, seed);
         quality = 0; // Set this to the computed solution quality
     } 
     else 
     {
-        std::cerr << "Error: Unknown method " << method << std::endl;
+        cerr << "Error: Unknown method " << method << endl;
         return 1;
     }
     
