@@ -97,7 +97,7 @@ double bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, c
 vector<int> exactAlgorithm(const Dataset& dataset, int timeLimit) {
     // Implement brute-force algorithm here
     vector<size_t> sequence;
-    for (int i = 0; i < dataset.points.size())
+    for (int i = 0; i < dataset.points.size(); i++)
     {
         sequence.push_back(i);
     }
