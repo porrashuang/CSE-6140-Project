@@ -307,13 +307,17 @@ int main(int argc, char* argv[]) {
         cerr << "Usage: " << argv[0] << " <filename> <method> <timeLimit> [seed]" << endl;
         return 1;
     }
+    
+    string filename = argv[1];
+    string method = argv[2];
+    int timeLimit = atoi(argv[3]);
+    int seed = argc == 5 ? atoi(argv[4]) : 0;
     */
     
-    
-    string filename = "DATA/DATA/Atlanta.tsp";//argv[1];
-    string method = "LS";//argv[2];
-    int timeLimit = 0;//atoi(argv[3]);
-    int seed = 43;//argc == 5 ? atoi(argv[4]) : 0;
+    string filename = "DATA/DATA/Atlanta.tsp";
+    string method = "LS";
+    int timeLimit = 0;
+    int seed = 43;
     
     // Load dataset
     Dataset dataset = parseTSPFile(filename);
