@@ -21,7 +21,8 @@ struct Point {
 struct Dataset {
     string name;
     vector<Point> points;
-    Dataset(string name, vector<Point> &&points) : name(name), points(points) {}
+    vector<vector<double>> distanceMatrix;
+    Dataset(string name, vector<Point> &&points, vector<vector<double>> &&distanceMatrix) : name(name), points(points), distanceMatrix(distanceMatrix) {}
 };
 
 
@@ -39,7 +40,7 @@ Dataset parseTSPFile(const std::string& filename) {
 
     if (!file.is_open()) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
-        return Dataset("", {});
+        return Dataset("", {}, {});
     }
 
     while (std::getline(file, line)) {
@@ -62,15 +63,45 @@ Dataset parseTSPFile(const std::string& filename) {
             }
         }
     }
+    vector<std::vector<double>> distanceMatrix(points.size(), vector<double>(points.size(), 0.0));
+    for (int i = 0; i < points.size(); ++i) {
+        for (int j = i + 1; j < points.size(); ++j) {
+            double dx = points[i].x - points[j].x;
+            double dy = points[i].y - points[j].y;
+            double distance = std::round(std::sqrt(dx * dx + dy * dy));
+            distanceMatrix[i][j] = distance;
+            distanceMatrix[j][i] = distance; // Symmetric matrix
+        }
+    }
+
 
     file.close();
-    return Dataset(name, std::move(points));
+    return Dataset(name, std::move(points), std::move(distanceMatrix));
 }
-
+double bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, const vector<vector<double>> &distanceMatrix)
+{
+    if (start == end)
+    {
+        // Calculate accumulated distance
+        // Store the answer
+    }
+    for (int i = start; i <= end; i++)
+    {
+        swap(sequence[i], start);
+        bruteForceRecursive(start + 1, end, sequence, distanceMatrix);
+        swap(sequence[i], start);
+    }
+    return 0.0;
+}
 // Placeholder for exact algorithm (brute-force)
-vector<int> exactAlgorithm(const vector<Point>& points, int timeLimit) {
+vector<int> exactAlgorithm(const Dataset& dataset, int timeLimit) {
     // Implement brute-force algorithm here
-    // Placeholder for result
+    vector<size_t> sequence;
+    for (int i = 0; i < dataset.points.size())
+    {
+        sequence.push_back(i);
+    }
+    bruteForceRecursive(0, dataset.points.size() - 1, sequence, dataset.distanceMatrix);
     return {0}; // Replace with computed tour
 }
 
@@ -126,7 +157,7 @@ int main(int argc, char* argv[]) {
     
     if (method == "BF") 
     {
-        tour = exactAlgorithm(dataset.points, timeLimit);
+        tour = exactAlgorithm(dataset, timeLimit);
         quality = 0; // Set this to the computed solution quality
     } 
     else if (method == "Approx") 
