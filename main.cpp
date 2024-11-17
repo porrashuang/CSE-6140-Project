@@ -24,8 +24,13 @@ struct Dataset {
     vector<vector<double>> distanceMatrix;
     Dataset(string name, vector<Point> &&points, vector<vector<double>> &&distanceMatrix) : name(name), points(points), distanceMatrix(distanceMatrix) {}
 };
+struct Answer {
+    double totalDistance;
+    vector<size_t> sequence;
+    Answer(): totalDistance(__DBL_MAX__) {}
+};
 
-
+static Answer answer;
 // Function to calculate Euclidean distance between two points
 double calculateDistance(const Point& a, const Point& b) 
 {
@@ -78,20 +83,30 @@ Dataset parseTSPFile(const std::string& filename) {
     file.close();
     return Dataset(name, std::move(points), std::move(distanceMatrix));
 }
-double bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, const vector<vector<double>> &distanceMatrix)
+void bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, const vector<vector<double>> &distanceMatrix)
 {
     if (start == end)
     {
         // Calculate accumulated distance
+        double accumulated = 0.0;
+        for (int i = 1; i < sequence.size(); i++)
+        {
+            accumulated += distanceMatrix[sequence[i]][sequence[i - 1]];
+        }
         // Store the answer
+        if (accumulated < answer.totalDistance)
+        {
+            answer.totalDistance = accumulated;
+            answer.sequence = sequence;
+        }
+        return;
     }
     for (int i = start; i <= end; i++)
     {
-        swap(sequence[i], start);
+        swap(sequence[i], sequence[start]);
         bruteForceRecursive(start + 1, end, sequence, distanceMatrix);
-        swap(sequence[i], start);
+        swap(sequence[i], sequence[start]);
     }
-    return 0.0;
 }
 // Placeholder for exact algorithm (brute-force)
 vector<int> exactAlgorithm(const Dataset& dataset, int timeLimit) {
@@ -120,7 +135,7 @@ vector<int> localSearchAlgorithm(const vector<Point>& points, int timeLimit, int
 }
 
 // Function to save solution to file
-void saveSolution(const string& instance, const string& method, int timeLimit, int seed, double quality, const vector<int>& tour) {
+void saveSolution(const string& instance, const string& method, int timeLimit, int seed, double quality, const vector<size_t>& tour) {
     string filename = instance + " " + method + " " + to_string(timeLimit) + (method == "LS" ? " " + to_string(seed) : "") + ".sol";
     ofstream outFile(filename);
     
@@ -138,46 +153,60 @@ void saveSolution(const string& instance, const string& method, int timeLimit, i
 
 // Main function to handle input and select algorithm
 int main(int argc, char* argv[]) {
-    if (argc < 4) {
-        cerr << "Usage: " << argv[0] << " <filename> <method> <timeLimit> [seed]" << endl;
+    if (argc < 7) {
+        cerr << "Usage: " << argv[0] << " -inst <filename> -alg [BF | Approx | LS] -time <cut_off> [-seed <random_seed>]" << endl;
         return 1;
     }
-    
-    string filename = argv[1];
-    string method = argv[2];
-    int timeLimit = atoi(argv[3]);
-    int seed = argc == 5 ? atoi(argv[4]) : 0;
-    
-    // Load dataset
+
+    string filename;
+    string method;
+    int timeLimit = 0;
+    int seed = 0;
+
+    for (int i = 1; i < argc; i++) {
+        if (string(argv[i]) == "-inst" && i + 1 < argc) {
+            filename = argv[++i];
+        } else if (string(argv[i]) == "-alg" && i + 1 < argc) {
+            method = argv[++i];
+        } else if (string(argv[i]) == "-time" && i + 1 < argc) {
+            timeLimit = atoi(argv[++i]);
+        } else if (string(argv[i]) == "-seed" && i + 1 < argc) {
+            seed = atoi(argv[++i]);
+        }
+    }
+
+    if (filename.empty() || method.empty() || timeLimit == 0) {
+        cerr << "Error: Missing required arguments" << endl;
+        return 1;
+    }
     Dataset dataset = parseTSPFile(filename);
-    
-    // Select and run the algorithm
-    vector<int> tour;
-    double quality = numeric_limits<double>::max();
-    
     if (method == "BF") 
     {
-        tour = exactAlgorithm(dataset, timeLimit);
-        quality = 0; // Set this to the computed solution quality
+        exactAlgorithm(dataset, timeLimit);        
     } 
     else if (method == "Approx") 
     {
-        tour = approximateAlgorithm(dataset.points);
-        quality = 0; // Set this to the computed solution quality
+        approximateAlgorithm(dataset.points);        
     } 
     else if (method == "LS") 
     {
-        tour = localSearchAlgorithm(dataset.points, timeLimit, seed);
-        quality = 0; // Set this to the computed solution quality
+        localSearchAlgorithm(dataset.points, timeLimit, seed);        
     } 
     else 
     {
         cerr << "Error: Unknown method " << method << endl;
         return 1;
     }
-    
+    printf("The best route distance is %f\n", answer.totalDistance);
+    printf("The sequence is: ");
+    for (auto idx : answer.sequence)
+    {
+        printf("%d, ", idx);
+    }
+    printf("\n");
+    // TODO: Calculate the quality
     // Save the result
-    saveSolution(filename, method, timeLimit, seed, quality, tour);
+    saveSolution(filename, method, timeLimit, seed, 0, answer.sequence);
     
     return 0;
 }
