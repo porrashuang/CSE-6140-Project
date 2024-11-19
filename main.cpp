@@ -9,6 +9,9 @@
 #include <chrono>
 #include <random>
 #include <algorithm> // For std::random_shuffle and std::find
+#include <queue>          // For priority_queue
+#include <unordered_set>  // For unordered_set
+#include <functional>     // For std::function
 
 using namespace std;
 // Struct for storing point data
@@ -123,11 +126,81 @@ vector<int> exactAlgorithm(const Dataset& dataset, int timeLimit) {
 }
 
 // Placeholder for approximation algorithm (MST-based 2-approximation)
-vector<int> approximateAlgorithm(const vector<Point>& points) {
-    // Implement 2-approximation algorithm here
-    // Placeholder for result
-    return {0}; // Replace with computed tour
+void approximateAlgorithm(const vector<Point>& points) {
+    int n = points.size();
+    vector<vector<double>> distanceMatrix(n, vector<double>(n, 0.0));
+    
+    // Compute the distance matrix
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            double dist = calculateDistance(points[i], points[j]);
+            distanceMatrix[i][j] = dist;
+            distanceMatrix[j][i] = dist; // symmetric matrix
+        }
+    }
+
+    // Build the MST using Prim's algorithm
+    vector<bool> visited(n, false);
+    vector<vector<int>> mst(n);
+    priority_queue<pair<double, pair<int, int>>, vector<pair<double, pair<int, int>>>, greater<>> minHeap;
+
+    visited[0] = true; // Start with city 0
+    for (int i = 1; i < n; ++i) {
+        minHeap.push({distanceMatrix[0][i], {0, i}});
+    }
+
+    while (!minHeap.empty()) {
+        auto top = minHeap.top();
+        double cost = top.first;
+        auto edge = top.second;
+        int u = edge.first;
+        int v = edge.second;
+        minHeap.pop();
+
+        if (visited[v]) continue;
+        visited[v] = true;
+        mst[u].push_back(v);
+        mst[v].push_back(u);
+
+        for (int w = 0; w < n; ++w) {
+            if (!visited[w]) {
+                minHeap.push({distanceMatrix[v][w], {v, w}});
+            }
+        }
+    }
+
+    // Preorder traversal of the MST to approximate the TSP tour
+    vector<size_t> tour;
+    unordered_set<int> visitedNodes;
+    double totalDistance = 0.0;
+
+    function<void(int)> preorderTraversal = [&](int node) {
+        visitedNodes.insert(node);
+        tour.push_back(node);
+
+        // Record the path when going through the best route
+        if (tour.size() > 1) {
+            totalDistance += calculateDistance(points[tour[tour.size() - 2]], points[tour.back()]);
+        }
+
+        for (int neighbor : mst[node]) {
+            if (visitedNodes.find(neighbor) == visitedNodes.end()) {
+                preorderTraversal(neighbor);
+            }
+        }
+    };
+    preorderTraversal(0);
+
+    // After finishing the traversal, calculate the return distance (last to first)
+    if (!tour.empty()) {
+        totalDistance += calculateDistance(points[tour.back()], points[tour.front()]);
+    }
+
+    // Store the results in the global `answer` object
+    answer.sequence = tour;
+    answer.totalDistance = totalDistance;
 }
+
 
 // Functions for local search (GA)
 // calculate tour distance
@@ -372,7 +445,7 @@ int main(int argc, char* argv[]) {
     printf("The sequence is: ");
     for (auto idx : answer.sequence)
     {
-        printf("%d, ", idx);
+        printf("%lu, ", idx);
     }
     printf("\n");
     // TODO: Calculate the quality
