@@ -215,10 +215,19 @@ double calc_tour_dist(const vector<int>& tour, const Dataset& dataset) {
 }
 
 // initialize populations
-vector<vector<int>> init_population(int population_size, int num_cities, default_random_engine& rng) {
+vector<vector<int>> init_population(const Dataset& dataset, int population_size, int num_cities, default_random_engine& rng) {
     vector<vector<int>> population;
+    //vector<int> base_tour(num_cities);
+    
+    approximateAlgorithm(dataset.points);
     vector<int> base_tour(num_cities);
-    for (int i = 0; i < num_cities; ++i) base_tour[i] = i;
+    
+    cout << "Base tour from 2-approx: " << endl;
+    for (int i = 0; i < num_cities; ++i) {
+        base_tour[i] = static_cast<int>(answer.sequence[i]);
+        cout << answer.sequence[i] << " ";
+    }
+    cout << endl << "2-approx total Distance: " << answer.totalDistance << endl << endl;
     
     for (int i = 0; i < population_size; ++i) {
         // Shuffle the base tour to create a new, randomized tour
@@ -235,7 +244,7 @@ vector<vector<int>> init_population(int population_size, int num_cities, default
 vector<int> tour_select(const vector<vector<int>>& population, const Dataset& dataset, default_random_engine& rng) {
     uniform_int_distribution<int> rand_idx(0, population.size() - 1);
     
-    int tour_size = dataset.points.size() * 0.1; // larger tour size, more likely to get the best in all tours
+    int tour_size = dataset.points.size() * 0.2; // larger tour size, more likely to get the best in all tours
     vector<int> best_tour = population[rand_idx(rng)];
     double best_fitness = calc_tour_dist(best_tour, dataset);
     
@@ -302,11 +311,11 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
     
     // Manual set parameters
     int population_size = 50;
-    int max_generations = 100;
-    int mutation_rate = 0.2; // between 0 ~ 1
+    int max_generations = 2000;
+    int mutation_rate = 0.3; // between 0 ~ 1
     
     // initialize population
-    vector<vector<int>> population = init_population(population_size, num_cities, rng);
+    vector<vector<int>> population = init_population(dataset, population_size, num_cities, rng);
     
     // Main loop for generations
     for (int cur_generation = 0; cur_generation < max_generations; ++cur_generation) {
@@ -354,7 +363,7 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
                 best_tour = tour;
             }
         }
-        cout << "Gen " << cur_generation << " - Best Distance: " << best_dist << endl;
+        //cout << "Gen " << cur_generation << " - Best Distance: " << best_dist << endl;
     }
     
     // last check of best tour
@@ -368,10 +377,12 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
         }
     }
     
-    cout << "Final result: " << best_dist << endl;
+    /*
+    cout << "GA final result: " << best_dist << endl;
     cout << "Tour: ";
     for (int i: best_tour) cout << i << ' ';
     cout << endl;
+    */
     
     vector<size_t> best_tour_convert(best_tour.size());
     transform(best_tour.begin(), best_tour.end(), best_tour_convert.begin(), [](int val) { return static_cast<size_t>(val); });
