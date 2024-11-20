@@ -142,18 +142,12 @@ double calc_tour_dist(const vector<int>& tour, const Dataset& dataset) {
 }
 
 // initialize populations
-vector<vector<int>> init_population(int population_size, int num_cities) {
+vector<vector<int>> init_population(int population_size, int num_cities, default_random_engine& rng) {
     vector<vector<int>> population;
     vector<int> base_tour(num_cities);
     for (int i = 0; i < num_cities; ++i) base_tour[i] = i;
     
-    // Create random device and random engine
-    random_device rd;
-    
     for (int i = 0; i < population_size; ++i) {
-        // Seed a new random engine for each shuffle to ensure randomness
-        default_random_engine rng(rd());
-        
         // Shuffle the base tour to create a new, randomized tour
         shuffle(base_tour.begin(), base_tour.end(), rng);
         
@@ -165,14 +159,18 @@ vector<vector<int>> init_population(int population_size, int num_cities) {
 }
 
 // selection of parents tour
-vector<int> tour_select(const vector<vector<int>>& population, const Dataset& dataset) {
+vector<int> tour_select(const vector<vector<int>>& population, const Dataset& dataset, default_random_engine& rng) {
+    uniform_int_distribution<int> rand_idx(0, population.size() - 1);
+    
     int tour_size = dataset.points.size() * 0.1; // larger tour size, more likely to get the best in all tours
-    vector<int> best_tour = population[rand() % population.size()];
+    vector<int> best_tour = population[rand_idx(rng)];
     double best_fitness = calc_tour_dist(best_tour, dataset);
     
     for (int i = 1;i < tour_size; i++) {
-        vector<int> contender = population[rand() % population.size()];
+        vector<int> contender = population[rand_idx(rng)];
+        
         double contender_fitness = calc_tour_dist(contender, dataset);
+        
         if (contender_fitness < best_fitness) {
             best_tour = contender;
             best_fitness = contender_fitness;
@@ -183,13 +181,15 @@ vector<int> tour_select(const vector<vector<int>>& population, const Dataset& da
 }
 
 // Crossover
-vector<int> Crossover(const vector<int>& parent1, const vector<int>& parent2) {
+vector<int> Crossover(const vector<int>& parent1, const vector<int>& parent2, default_random_engine& rng) {
     int size = parent1.size();
     vector<int> child(size, -1);
     
+    uniform_int_distribution<int> rand_range(0, size - 1);
+    
     // Randomly choose sub-tour to inherit from parent1
-    int start = rand() % size;
-    int end = start + (rand() % (size - start));
+    int start = rand_range(rng);
+    int end = start + rand_range(rng) % (size - start);
     
     for (int i = start; i <= end; ++i) {
         child[i] = parent1[i];
@@ -207,19 +207,25 @@ vector<int> Crossover(const vector<int>& parent1, const vector<int>& parent2) {
     return child;
 }
 // Mutate
-void Mutate(vector<int>& tour) {
+void Mutate(vector<int>& tour, default_random_engine& rng) {
     cout << "Mutation!" << endl;
-    int i = rand() % tour.size();
-    int j = rand() % tour.size();
+    
+    uniform_int_distribution<int> rand_idx(0, tour.size() - 1);
+    
+    int i = rand_idx(rng);
+    int j = rand_idx(rng);
     swap(tour[i], tour[j]);
 }
 
 // Placeholder for local search algorithm (e.g., Simulated Annealing)
 void localSearchAlgorithm(const Dataset& dataset, int seed) {
     cout << "Local Search Algo function running...\n";
-    //srand(seed);
+    
     // Implement local search algorithm here
     int num_cities = dataset.points.size();
+    
+    // Initialize random engine
+    default_random_engine rng(seed);
     
     // Manual set parameters
     int population_size = 50;
@@ -227,7 +233,7 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
     int mutation_rate = 0.2; // between 0 ~ 1
     
     // initialize population
-    vector<vector<int>> population = init_population(population_size, num_cities);
+    vector<vector<int>> population = init_population(population_size, num_cities, rng);
     
     // Main loop for generations
     for (int cur_generation = 0; cur_generation < max_generations; ++cur_generation) {
@@ -236,10 +242,10 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
         for (int i = 0; i < population_size; ++i) {
             
             // selection of parents 
-            vector<int> parent1 = tour_select(population, dataset);
+            vector<int> parent1 = tour_select(population, dataset, rng);
             vector<int> parent2;
             do {
-                parent2 = tour_select(population, dataset);
+                parent2 = tour_select(population, dataset, rng);
             } while (parent1 == parent2);
             
             /*
@@ -251,11 +257,12 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
             */
             
             // crossover
-            vector<int> child = Crossover(parent1, parent2);
+            vector<int> child = Crossover(parent1, parent2, rng);
              
             // mutation 
-            if ((rand() < (double)RAND_MAX * mutation_rate)) {
-                Mutate(child);
+            uniform_real_distribution<double> rand_real(0.0, 1.0);
+            if ((rand_real(rng) < mutation_rate)) {
+                Mutate(child, rng);
             }
             // add in child to new population
             new_population.push_back(child);
