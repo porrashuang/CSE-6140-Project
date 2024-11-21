@@ -295,8 +295,6 @@ vector<int> Crossover(const vector<int>& parent1, const vector<int>& parent2, de
 }
 // Mutate
 void Mutate(vector<int>& tour, default_random_engine& rng) {
-    cout << "Mutation!" << endl;
-    
     uniform_int_distribution<int> rand_idx(0, tour.size() - 1);
     
     int i = rand_idx(rng);
@@ -317,7 +315,7 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
     // Manual set parameters
     int population_size = POPULATION_SIZE;
     int max_generations = MAX_GENERATIONS;
-    int mutation_rate = MUTATION_RATE;
+    double mutation_rate = MUTATION_RATE;
     
     // initialize population
     vector<vector<int>> population = init_population(dataset, population_size, num_cities, rng);
