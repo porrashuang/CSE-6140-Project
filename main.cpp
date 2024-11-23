@@ -12,6 +12,7 @@
 #include <queue>          // For priority_queue
 #include <unordered_set>  // For unordered_set
 #include <functional>     // For std::function
+#include <csignal>       // For signal handling
 
 const static int MAX_GENERATIONS = 2000;
 const static int POPULATION_SIZE = 50;
@@ -34,6 +35,17 @@ struct Dataset {
     vector<vector<double>> distanceMatrix;
     Dataset(string name, vector<Point> &&points, vector<vector<double>> &&distanceMatrix) : name(name), points(points), distanceMatrix(distanceMatrix) {}
 };
+
+struct Settings {
+    string filename;
+    string method;
+    int timeLimit;
+    int seed;
+    std::chrono::time_point<std::chrono::system_clock> startTime;
+    Settings(string filename, string method, int timeLimit, int seed) : filename(filename), method(method), 
+        timeLimit(timeLimit), seed(seed), startTime(std::chrono::system_clock::now()) {}
+};
+
 struct Answer {
     double totalDistance;
     vector<size_t> sequence;
@@ -41,6 +53,7 @@ struct Answer {
 };
 
 static Answer answer;
+static Settings settings;
 // Function to calculate Euclidean distance between two points
 double calculateDistance(const Point& a, const Point& b) 
 {
@@ -376,19 +389,39 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
 }
 
 // Function to save solution to file
-void saveSolution(const string& instance, const string& method, int timeLimit, int seed, double quality, const vector<size_t>& tour) {
-    string filename = instance + " " + method + " " + to_string(timeLimit) + (method == "LS" ? " " + to_string(seed) : "") + ".sol";
+void saveSolution() {
+    string filename = settings.filename + "_" + settings.method + "_" + 
+        settings.method == "Approx" ? "" : (settings.timeLimit) + 
+        (settings.method == "LS" ? "_" + to_string(settings.seed) : "") + 
+        ".sol";
     ofstream outFile(filename);
     
     if (outFile.is_open()) {
-        outFile << quality << "\n";
-        for (size_t i = 0; i < tour.size(); ++i) {
-            outFile << tour[i] << (i < tour.size() - 1 ? "," : "");
+        outFile << answer.totalDistance << "\n";
+        for (size_t i = 0; i < answer.sequence.size(); ++i) {
+            outFile << answer.sequence[i] << (i < answer.sequence.size() - 1 ? "," : "");
         }
         outFile.close();
         cout << "Solution saved to " << filename << endl;
     } else {
         cerr << "Error: Unable to open file " << filename << " for writing." << endl;
+    }
+}
+void printAndSaveAnswer() {
+    printf("The best route distance is %f\n", answer.totalDistance);
+    printf("The sequence is: ");
+    for (auto idx : answer.sequence)
+    {
+        printf("%lu, ", idx);
+    }
+    printf("\n");
+    saveSolution();
+}
+void signalHandler(int signal) {
+    if (signal == SIGUSR1) {
+        printf("Early termination, saving the current best solution...\n");
+        printAndSaveAnswer();
+        exit(0);
     }
 }
 
@@ -420,6 +453,8 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Missing required arguments" << endl;
         return 1;
     }
+    settings = Settings(filename, method, timeLimit, seed);
+    signal(SIGUSR1, signalHandler);
     Dataset dataset = parseTSPFile(filename);
     if (method == "BF") 
     {
@@ -438,16 +473,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Unknown method " << method << endl;
         return 1;
     }
-    printf("The best route distance is %f\n", answer.totalDistance);
-    printf("The sequence is: ");
-    for (auto idx : answer.sequence)
-    {
-        printf("%lu, ", idx);
-    }
-    printf("\n");
-    // TODO: Calculate the quality
-    // Save the result
-    saveSolution(filename, method, timeLimit, seed, 0, answer.sequence);
+   
     
     return 0;
 }
