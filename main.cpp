@@ -158,19 +158,10 @@ void exactAlgorithm(const Dataset& dataset) {
     bruteForceRecursive(0, dataset.points.size() - 1, sequence, dataset);
 }
 
-// Placeholder for approximation algorithm (MST-based 2-approximation)
-void approximateAlgorithm(const vector<Point>& points) {
+void approximateAlgorithm(const Dataset& dataset) {
+    const auto& points = dataset.points;
+    const auto& distanceMatrix = dataset.distanceMatrix;
     int n = points.size();
-    vector<vector<double>> distanceMatrix(n, vector<double>(n, 0.0));
-    
-    // Compute the distance matrix
-    for (int i = 0; i < n; ++i) {
-        for (int j = i + 1; j < n; ++j) {
-            double dist = calculateDistance(points[i], points[j]);
-            distanceMatrix[i][j] = dist;
-            distanceMatrix[j][i] = dist; // symmetric matrix
-        }
-    }
 
     // Build the MST using Prim's algorithm
     vector<bool> visited(n, false);
@@ -235,11 +226,12 @@ void approximateAlgorithm(const vector<Point>& points) {
 }
 
 
+
 // initialize populations
 vector<vector<int>> initPopulation(const Dataset& dataset, int numCities, default_random_engine& rng) {
     vector<vector<int>> population;
     
-    approximateAlgorithm(dataset.points);
+    approximateAlgorithm(dataset);
     vector<int> baseTour(numCities);
     
     cout << "Base tour from 2-approx: " << endl;
@@ -466,7 +458,7 @@ int main(int argc, char* argv[]) {
     } 
     else if (method == "Approx") 
     {
-        approximateAlgorithm(dataset.points);        
+        approximateAlgorithm(dataset);        
     } 
     else if (method == "LS") 
     {
