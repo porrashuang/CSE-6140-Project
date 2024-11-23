@@ -42,8 +42,16 @@ struct Settings {
     int timeLimit;
     int seed;
     std::chrono::time_point<std::chrono::system_clock> startTime;
-    Settings(string filename, string method, int timeLimit, int seed) : filename(filename), method(method), 
-        timeLimit(timeLimit), seed(seed), startTime(std::chrono::system_clock::now()) {}
+    Settings(): timeLimit(0), seed(0), startTime(std::chrono::system_clock::now()) {}
+    void Init(const std::string& filename, const std::string& method, int timeLimit, int seed) 
+    {
+        this->filename = filename;
+        this->method = method;
+        this->timeLimit = timeLimit;
+        this->seed = seed;
+        this->startTime = std::chrono::system_clock::now();
+    }
+    
 };
 
 struct Answer {
@@ -195,7 +203,7 @@ void approximateAlgorithm(const vector<Point>& points) {
     }
 
     // Preorder traversal of the MST to approximate the TSP tour
-    vector<size_t> tour;
+    vector<int> tour;
     unordered_set<int> visitedNodes;
     double totalDistance = 0.0;
 
@@ -383,12 +391,13 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
 // Function to save solution to file
 void saveSolution() {
     string filename = settings.filename + "_" + settings.method + "_" + 
-        settings.method == "Approx" ? "" : (settings.timeLimit) + 
+        (settings.method == "Approx" ? "" : to_string(settings.timeLimit)) + 
         (settings.method == "LS" ? "_" + to_string(settings.seed) : "") + 
         ".sol";
     ofstream outFile(filename);
     
     if (outFile.is_open()) {
+        outFile << "Time Spent: " << chrono::duration<double>(chrono::system_clock::now() - settings.startTime).count() << "\n";
         outFile << answer.totalDistance << "\n";
         for (int i = 0; i < answer.sequence.size(); ++i) {
             outFile << answer.sequence[i] << (i < answer.sequence.size() - 1 ? "," : "");
@@ -401,11 +410,12 @@ void saveSolution() {
 }
 
 void printAndSaveAnswer() {
+    printf("The time taken is %f\n", chrono::duration<double>(chrono::system_clock::now() - settings.startTime).count());
     printf("The best route distance is %f\n", answer.totalDistance);
     printf("The sequence is: ");
     for (auto idx : answer.sequence)
     {
-        printf("%lu, ", idx);
+        printf("%d, ", idx);
     }
     printf("\n");
     saveSolution();
@@ -447,7 +457,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Missing required arguments" << endl;
         return 1;
     }
-    settings = Settings(filename, method, timeLimit, seed);
+    settings.Init(filename, method, timeLimit, seed);
     signal(SIGUSR1, signalHandler);
     Dataset dataset = parseTSPFile(filename);
     if (method == "BF") 
@@ -467,7 +477,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Unknown method " << method << endl;
         return 1;
     }
-   
+    printAndSaveAnswer();
     
     return 0;
 }
