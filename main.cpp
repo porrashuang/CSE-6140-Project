@@ -48,7 +48,7 @@ struct Settings {
 
 struct Answer {
     double totalDistance;
-    vector<size_t> sequence;
+    vector<int> sequence;
     Answer(): totalDistance(__DBL_MAX__) {}
 };
 
@@ -106,16 +106,24 @@ Dataset parseTSPFile(const std::string& filename) {
     file.close();
     return Dataset(name, std::move(points), std::move(distanceMatrix));
 }
-void bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, const vector<vector<double>> &distanceMatrix)
+
+// calculate tour distance
+double calcTourDist(const vector<int>& tour, const Dataset& dataset) {
+    double totalDist = 0;
+    for (int i = 0; i < tour.size() - 1; i++) {
+        totalDist += dataset.distanceMatrix[tour[i]][tour[i + 1]];
+    }
+    // Add last point -> starting point distance
+    totalDist += dataset.distanceMatrix[tour.back()][tour[0]];
+    return totalDist;
+}
+
+void bruteForceRecursive(int start, int end, vector<int> &sequence, const Dataset& dataset)
 {
     if (start == end)
     {
         // Calculate accumulated distance
-        double accumulated = 0.0;
-        for (int i = 1; i < sequence.size(); i++)
-        {
-            accumulated += distanceMatrix[sequence[i]][sequence[i - 1]];
-        }
+        double accumulated = calcTourDist(sequence, dataset);
         // Store the answer
         if (accumulated < answer.totalDistance)
         {
@@ -127,20 +135,19 @@ void bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, con
     for (int i = start; i <= end; i++)
     {
         swap(sequence[i], sequence[start]);
-        bruteForceRecursive(start + 1, end, sequence, distanceMatrix);
+        bruteForceRecursive(start + 1, end, sequence, dataset);
         swap(sequence[i], sequence[start]);
     }
 }
 // Placeholder for exact algorithm (brute-force)
-vector<int> exactAlgorithm(const Dataset& dataset, int timeLimit) {
+void exactAlgorithm(const Dataset& dataset) {
     // Implement brute-force algorithm here
-    vector<size_t> sequence;
+    vector<int> sequence;
     for (int i = 0; i < dataset.points.size(); i++)
     {
         sequence.push_back(i);
     }
-    bruteForceRecursive(0, dataset.points.size() - 1, sequence, dataset.distanceMatrix);
-    return {0}; // Replace with computed tour
+    bruteForceRecursive(0, dataset.points.size() - 1, sequence, dataset);
 }
 
 // Placeholder for approximation algorithm (MST-based 2-approximation)
@@ -220,18 +227,6 @@ void approximateAlgorithm(const vector<Point>& points) {
 }
 
 
-// Functions for local search (GA)
-// calculate tour distance
-double calcTourDist(const vector<int>& tour, const Dataset& dataset) {
-    double totalDist = 0;
-    for (size_t i = 0; i < tour.size() - 1; i++) {
-        totalDist += dataset.distanceMatrix[tour[i]][tour[i + 1]];
-    }
-    // Add last point -> starting point distance
-    totalDist += dataset.distanceMatrix[tour.back()][tour[0]];
-    return totalDist;
-}
-
 // initialize populations
 vector<vector<int>> initPopulation(const Dataset& dataset, int numCities, default_random_engine& rng) {
     vector<vector<int>> population;
@@ -241,7 +236,7 @@ vector<vector<int>> initPopulation(const Dataset& dataset, int numCities, defaul
     
     cout << "Base tour from 2-approx: " << endl;
     for (int i = 0; i < numCities; ++i) {
-        baseTour[i] = static_cast<int>(answer.sequence[i]);
+        baseTour[i] = answer.sequence[i];
         cout << answer.sequence[i] << " ";
     }
     cout << endl << "2-approx total Distance: " << answer.totalDistance << endl << endl;
@@ -379,11 +374,8 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
     }
     
 
-    vector<size_t> bestTourConvert(bestTour.size());
-    transform(bestTour.begin(), bestTour.end(), bestTourConvert.begin(), [](int val) { return static_cast<size_t>(val); });
-    
     answer.totalDistance = bestDist;
-    answer.sequence = bestTourConvert;
+    answer.sequence = bestTour;
     return;
 
 }
@@ -398,7 +390,7 @@ void saveSolution() {
     
     if (outFile.is_open()) {
         outFile << answer.totalDistance << "\n";
-        for (size_t i = 0; i < answer.sequence.size(); ++i) {
+        for (int i = 0; i < answer.sequence.size(); ++i) {
             outFile << answer.sequence[i] << (i < answer.sequence.size() - 1 ? "," : "");
         }
         outFile.close();
@@ -407,6 +399,7 @@ void saveSolution() {
         cerr << "Error: Unable to open file " << filename << " for writing." << endl;
     }
 }
+
 void printAndSaveAnswer() {
     printf("The best route distance is %f\n", answer.totalDistance);
     printf("The sequence is: ");
@@ -417,6 +410,7 @@ void printAndSaveAnswer() {
     printf("\n");
     saveSolution();
 }
+
 void signalHandler(int signal) {
     if (signal == SIGUSR1) {
         printf("Early termination, saving the current best solution...\n");
@@ -458,7 +452,7 @@ int main(int argc, char* argv[]) {
     Dataset dataset = parseTSPFile(filename);
     if (method == "BF") 
     {
-        exactAlgorithm(dataset, timeLimit);        
+        exactAlgorithm(dataset);        
     } 
     else if (method == "Approx") 
     {
