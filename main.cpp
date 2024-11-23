@@ -13,6 +13,11 @@
 #include <unordered_set>  // For unordered_set
 #include <functional>     // For std::function
 
+const static int MAX_GENERATIONS = 2000;
+const static int POPULATION_SIZE = 50;
+const static double MUTATION_RATE = 0.3;
+const static double TOUR_PERCENTAGE = 0.2;
+
 using namespace std;
 // Struct for storing point data
 struct Point {
@@ -204,178 +209,170 @@ void approximateAlgorithm(const vector<Point>& points) {
 
 // Functions for local search (GA)
 // calculate tour distance
-double calc_tour_dist(const vector<int>& tour, const Dataset& dataset) {
-    double total_dist = 0;
+double calcTourDist(const vector<int>& tour, const Dataset& dataset) {
+    double totalDist = 0;
     for (size_t i = 0; i < tour.size() - 1; i++) {
-        total_dist += dataset.distanceMatrix[tour[i]][tour[i + 1]];
+        totalDist += dataset.distanceMatrix[tour[i]][tour[i + 1]];
     }
     // Add last point -> starting point distance
-    total_dist += dataset.distanceMatrix[tour.back()][tour[0]];
-    return total_dist;
+    totalDist += dataset.distanceMatrix[tour.back()][tour[0]];
+    return totalDist;
 }
 
 // initialize populations
-vector<vector<int>> init_population(int population_size, int num_cities) {
+vector<vector<int>> initPopulation(const Dataset& dataset, int numCities, default_random_engine& rng) {
     vector<vector<int>> population;
-    vector<int> base_tour(num_cities);
-    for (int i = 0; i < num_cities; ++i) base_tour[i] = i;
     
-    // Create random device and random engine
-    random_device rd;
+    approximateAlgorithm(dataset.points);
+    vector<int> baseTour(numCities);
     
-    for (int i = 0; i < population_size; ++i) {
-        // Seed a new random engine for each shuffle to ensure randomness
-        default_random_engine rng(rd());
-        
+    cout << "Base tour from 2-approx: " << endl;
+    for (int i = 0; i < numCities; ++i) {
+        baseTour[i] = static_cast<int>(answer.sequence[i]);
+        cout << answer.sequence[i] << " ";
+    }
+    cout << endl << "2-approx total Distance: " << answer.totalDistance << endl << endl;
+    
+    for (int i = 0; i < POPULATION_SIZE; ++i) {
         // Shuffle the base tour to create a new, randomized tour
-        shuffle(base_tour.begin(), base_tour.end(), rng);
+        shuffle(baseTour.begin(), baseTour.end(), rng);
         
         // Add the randomized tour to the population
-        population.push_back(base_tour);
+        population.push_back(baseTour);
     }
     
     return population;
 }
 
 // selection of parents tour
-vector<int> tour_select(const vector<vector<int>>& population, const Dataset& dataset) {
-    int tour_size = dataset.points.size() * 0.1; // larger tour size, more likely to get the best in all tours
-    vector<int> best_tour = population[rand() % population.size()];
-    double best_fitness = calc_tour_dist(best_tour, dataset);
+vector<int> tourSelect(const vector<vector<int>>& population, const Dataset& dataset, default_random_engine& rng) {
+    uniform_int_distribution<int> randIdx(0, population.size() - 1);
     
-    for (int i = 1;i < tour_size; i++) {
-        vector<int> contender = population[rand() % population.size()];
-        double contender_fitness = calc_tour_dist(contender, dataset);
-        if (contender_fitness < best_fitness) {
-            best_tour = contender;
-            best_fitness = contender_fitness;
+    int tourSize = dataset.points.size() * TOUR_PERCENTAGE;
+    vector<int> bestTour = population[randIdx(rng)];
+    double bestFitness = calcTourDist(bestTour, dataset);
+    
+    for (int i = 1;i < tourSize; i++) {
+        vector<int> contender = population[randIdx(rng)];
+        
+        double contenderFitness = calcTourDist(contender, dataset);
+        
+        if (contenderFitness < bestFitness) {
+            bestTour = contender;
+            bestFitness = contenderFitness;
         }
     }
     
-    return best_tour;
+    return bestTour;
 }
 
 // Crossover
-vector<int> Crossover(const vector<int>& parent1, const vector<int>& parent2) {
+vector<int> Crossover(const vector<int>& parent1, const vector<int>& parent2, default_random_engine& rng) {
     int size = parent1.size();
     vector<int> child(size, -1);
     
+    uniform_int_distribution<int> randRange(0, size - 1);
+    
     // Randomly choose sub-tour to inherit from parent1
-    int start = rand() % size;
-    int end = start + (rand() % (size - start));
+    int start = randRange(rng);
+    int end = start + randRange(rng) % (size - start);
     
     for (int i = start; i <= end; ++i) {
         child[i] = parent1[i];
     }
     
     // Fill in remaining tour from parent2
-    int child_idx = (end + 1) % size;
+    int childIdx = (end + 1) % size;
     for (int i = 0; i < size; ++i) {
-        int parent2_city = parent2[(end + 1 + i) % size];
-        if (find(child.begin(), child.end(), parent2_city) == child.end()) {
-            child[child_idx] = parent2_city;
-            child_idx = (child_idx + 1) % size;
+        int parent2City = parent2[(end + 1 + i) % size];
+        if (find(child.begin(), child.end(), parent2City) == child.end()) {
+            child[childIdx] = parent2City;
+            childIdx = (childIdx + 1) % size;
         }
     }
     return child;
 }
 // Mutate
-void Mutate(vector<int>& tour) {
-    cout << "Mutation!" << endl;
-    int i = rand() % tour.size();
-    int j = rand() % tour.size();
+void Mutate(vector<int>& tour, default_random_engine& rng) {
+    uniform_int_distribution<int> randIdx(0, tour.size() - 1);
+    
+    int i = randIdx(rng);
+    int j = randIdx(rng);
     swap(tour[i], tour[j]);
 }
 
 // Placeholder for local search algorithm (e.g., Simulated Annealing)
 void localSearchAlgorithm(const Dataset& dataset, int seed) {
     cout << "Local Search Algo function running...\n";
-    //srand(seed);
-    // Implement local search algorithm here
-    int num_cities = dataset.points.size();
     
-    // Manual set parameters
-    int population_size = 50;
-    int max_generations = 100;
-    int mutation_rate = 0.2; // between 0 ~ 1
+    // Implement local search algorithm here
+    int numCities = dataset.points.size();
+    
+    // Initialize random engine
+    default_random_engine rng(seed);
     
     // initialize population
-    vector<vector<int>> population = init_population(population_size, num_cities);
+    vector<vector<int>> population = initPopulation(dataset, numCities, rng);
     
     // Main loop for generations
-    for (int cur_generation = 0; cur_generation < max_generations; ++cur_generation) {
-        vector<vector<int>> new_population;
+    for (int curGeneration = 0; curGeneration < MAX_GENERATIONS; ++curGeneration) {
+        vector<vector<int>> newPopulation;
         
-        for (int i = 0; i < population_size; ++i) {
+        for (int i = 0; i < POPULATION_SIZE; ++i) {
             
             // selection of parents 
-            vector<int> parent1 = tour_select(population, dataset);
+            vector<int> parent1 = tourSelect(population, dataset, rng);
             vector<int> parent2;
             do {
-                parent2 = tour_select(population, dataset);
+                parent2 = tourSelect(population, dataset, rng);
             } while (parent1 == parent2);
-            
-            /*
-            cout << "p1: ";
-            for (int i: parent1) cout << i << ' ';
-            cout << "p2: ";
-            for (int i: parent2) cout << i << ' ';
-            cout << endl;
-            */
-            
+
             // crossover
-            vector<int> child = Crossover(parent1, parent2);
+            vector<int> child = Crossover(parent1, parent2, rng);
              
             // mutation 
-            if ((rand() < (double)RAND_MAX * mutation_rate)) {
-                Mutate(child);
+            uniform_real_distribution<double> randReal(0.0, 1.0);
+            if ((randReal(rng) < MUTATION_RATE)) {
+                Mutate(child, rng);
             }
             // add in child to new population
-            new_population.push_back(child);
+            newPopulation.push_back(child);
         }
         
         // replace old population with new one
-        population = new_population;
+        population = newPopulation;
         
-        // Print best tour in cur_generation
-        double best_dist = calc_tour_dist(population[0], dataset);
-        vector<int> best_tour = population[0];
+        // Print best tour in curGeneration
+        double bestDist = calcTourDist(population[0], dataset);
+        vector<int> bestTour = population[0];
         for (const auto& tour : population) {
-            double dist = calc_tour_dist(tour, dataset);
-            if (dist < best_dist) {
-                best_dist = dist;
-                best_tour = tour;
+            double dist = calcTourDist(tour, dataset);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestTour = tour;
             }
         }
-        cout << "Gen " << cur_generation << " - Best Distance: " << best_dist << endl;
     }
     
     // last check of best tour
-    double best_dist = calc_tour_dist(population[0], dataset);
-    vector<int> best_tour = population[0];
+    double bestDist = calcTourDist(population[0], dataset);
+    vector<int> bestTour = population[0];
     for (const auto& tour : population) {
-        double dist = calc_tour_dist(tour, dataset);
-        if (dist < best_dist) {
-            best_dist = dist;
-            best_tour = tour;
+        double dist = calcTourDist(tour, dataset);
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestTour = tour;
         }
     }
     
-    cout << "Final result: " << best_dist << endl;
-    cout << "Tour: ";
-    for (int i: best_tour) cout << i << ' ';
-    cout << endl;
+
+    vector<size_t> bestTourConvert(bestTour.size());
+    transform(bestTour.begin(), bestTour.end(), bestTourConvert.begin(), [](int val) { return static_cast<size_t>(val); });
     
-    vector<size_t> best_tour_convert(best_tour.size());
-    transform(best_tour.begin(), best_tour.end(), best_tour_convert.begin(), [](int val) { return static_cast<size_t>(val); });
-    
-    answer.totalDistance = best_dist;
-    answer.sequence = best_tour_convert;
+    answer.totalDistance = bestDist;
+    answer.sequence = bestTourConvert;
     return;
-    
-    //return best_tour;
-    // Placeholder for result
-    //return {0}; // Replace with computed tour
+
 }
 
 // Function to save solution to file
