@@ -14,9 +14,9 @@
 #include <functional>     // For std::function
 #include <csignal>       // For signal handling
 
-const static int MAX_GENERATIONS = 2000;
+const static int MAX_GENERATIONS = 500;
 const static int POPULATION_SIZE = 50;
-const static double MUTATION_RATE = 0.3;
+const static double MUTATION_RATE = 0.4;
 const static double TOUR_PERCENTAGE = 0.2;
 
 using namespace std;
@@ -240,8 +240,8 @@ vector<vector<int>> initPopulation(const Dataset& dataset, int numCities, defaul
         cout << answer.sequence[i] << " ";
     }
     cout << endl << "2-approx total Distance: " << answer.totalDistance << endl << endl;
-    
-    for (int i = 0; i < POPULATION_SIZE; ++i) {
+    population.push_back(baseTour);
+    for (int i = 1; i < POPULATION_SIZE; ++i) {
         // Shuffle the base tour to create a new, randomized tour
         shuffle(baseTour.begin(), baseTour.end(), rng);
         
