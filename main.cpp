@@ -217,9 +217,9 @@ void approximateAlgorithm(const Dataset& dataset) {
 
     // After finishing the traversal, calculate the return distance (last to first)
     if (!tour.empty()) {
+        tour.push_back(tour.front());
         totalDistance += calculateDistance(points[tour.back()], points[tour.front()]);
     }
-
     // Store the results in the global `answer` object
     answer.sequence = tour;
     answer.totalDistance = totalDistance;
