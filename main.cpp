@@ -12,6 +12,7 @@
 #include <queue>          // For priority_queue
 #include <unordered_set>  // For unordered_set
 #include <functional>     // For std::function
+#include <csignal>       // For signal handling
 
 const static int MAX_GENERATIONS = 2000;
 const static int POPULATION_SIZE = 50;
@@ -34,13 +35,33 @@ struct Dataset {
     vector<vector<double>> distanceMatrix;
     Dataset(string name, vector<Point> &&points, vector<vector<double>> &&distanceMatrix) : name(name), points(points), distanceMatrix(distanceMatrix) {}
 };
+
+struct Settings {
+    string filename;
+    string method;
+    int timeLimit;
+    int seed;
+    std::chrono::time_point<std::chrono::system_clock> startTime;
+    Settings(): timeLimit(0), seed(0), startTime(std::chrono::system_clock::now()) {}
+    void Init(const std::string& filename, const std::string& method, int timeLimit, int seed) 
+    {
+        this->filename = filename;
+        this->method = method;
+        this->timeLimit = timeLimit;
+        this->seed = seed;
+        this->startTime = std::chrono::system_clock::now();
+    }
+    
+};
+
 struct Answer {
     double totalDistance;
-    vector<size_t> sequence;
+    vector<int> sequence;
     Answer(): totalDistance(__DBL_MAX__) {}
 };
 
 static Answer answer;
+static Settings settings;
 // Function to calculate Euclidean distance between two points
 double calculateDistance(const Point& a, const Point& b) 
 {
@@ -93,16 +114,24 @@ Dataset parseTSPFile(const std::string& filename) {
     file.close();
     return Dataset(name, std::move(points), std::move(distanceMatrix));
 }
-void bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, const vector<vector<double>> &distanceMatrix)
+
+// calculate tour distance
+double calcTourDist(const vector<int>& tour, const Dataset& dataset) {
+    double totalDist = 0;
+    for (int i = 0; i < tour.size() - 1; i++) {
+        totalDist += dataset.distanceMatrix[tour[i]][tour[i + 1]];
+    }
+    // Add last point -> starting point distance
+    totalDist += dataset.distanceMatrix[tour.back()][tour[0]];
+    return totalDist;
+}
+
+void bruteForceRecursive(int start, int end, vector<int> &sequence, const Dataset& dataset)
 {
     if (start == end)
     {
         // Calculate accumulated distance
-        double accumulated = 0.0;
-        for (int i = 1; i < sequence.size(); i++)
-        {
-            accumulated += distanceMatrix[sequence[i]][sequence[i - 1]];
-        }
+        double accumulated = calcTourDist(sequence, dataset);
         // Store the answer
         if (accumulated < answer.totalDistance)
         {
@@ -114,35 +143,25 @@ void bruteForceRecursive(size_t start, size_t end, vector<size_t> &sequence, con
     for (int i = start; i <= end; i++)
     {
         swap(sequence[i], sequence[start]);
-        bruteForceRecursive(start + 1, end, sequence, distanceMatrix);
+        bruteForceRecursive(start + 1, end, sequence, dataset);
         swap(sequence[i], sequence[start]);
     }
 }
 // Placeholder for exact algorithm (brute-force)
-vector<int> exactAlgorithm(const Dataset& dataset, int timeLimit) {
+void exactAlgorithm(const Dataset& dataset) {
     // Implement brute-force algorithm here
-    vector<size_t> sequence;
+    vector<int> sequence;
     for (int i = 0; i < dataset.points.size(); i++)
     {
         sequence.push_back(i);
     }
-    bruteForceRecursive(0, dataset.points.size() - 1, sequence, dataset.distanceMatrix);
-    return {0}; // Replace with computed tour
+    bruteForceRecursive(0, dataset.points.size() - 1, sequence, dataset);
 }
 
-// Placeholder for approximation algorithm (MST-based 2-approximation)
-void approximateAlgorithm(const vector<Point>& points) {
+void approximateAlgorithm(const Dataset& dataset) {
+    const auto& points = dataset.points;
+    const auto& distanceMatrix = dataset.distanceMatrix;
     int n = points.size();
-    vector<vector<double>> distanceMatrix(n, vector<double>(n, 0.0));
-    
-    // Compute the distance matrix
-    for (int i = 0; i < n; ++i) {
-        for (int j = i + 1; j < n; ++j) {
-            double dist = calculateDistance(points[i], points[j]);
-            distanceMatrix[i][j] = dist;
-            distanceMatrix[j][i] = dist; // symmetric matrix
-        }
-    }
 
     // Build the MST using Prim's algorithm
     vector<bool> visited(n, false);
@@ -175,7 +194,7 @@ void approximateAlgorithm(const vector<Point>& points) {
     }
 
     // Preorder traversal of the MST to approximate the TSP tour
-    vector<size_t> tour;
+    vector<int> tour;
     unordered_set<int> visitedNodes;
     double totalDistance = 0.0;
 
@@ -207,28 +226,17 @@ void approximateAlgorithm(const vector<Point>& points) {
 }
 
 
-// Functions for local search (GA)
-// calculate tour distance
-double calcTourDist(const vector<int>& tour, const Dataset& dataset) {
-    double totalDist = 0;
-    for (size_t i = 0; i < tour.size() - 1; i++) {
-        totalDist += dataset.distanceMatrix[tour[i]][tour[i + 1]];
-    }
-    // Add last point -> starting point distance
-    totalDist += dataset.distanceMatrix[tour.back()][tour[0]];
-    return totalDist;
-}
 
 // initialize populations
 vector<vector<int>> initPopulation(const Dataset& dataset, int numCities, default_random_engine& rng) {
     vector<vector<int>> population;
     
-    approximateAlgorithm(dataset.points);
+    approximateAlgorithm(dataset);
     vector<int> baseTour(numCities);
     
     cout << "Base tour from 2-approx: " << endl;
     for (int i = 0; i < numCities; ++i) {
-        baseTour[i] = static_cast<int>(answer.sequence[i]);
+        baseTour[i] = answer.sequence[i];
         cout << answer.sequence[i] << " ";
     }
     cout << endl << "2-approx total Distance: " << answer.totalDistance << endl << endl;
@@ -366,29 +374,50 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
     }
     
 
-    vector<size_t> bestTourConvert(bestTour.size());
-    transform(bestTour.begin(), bestTour.end(), bestTourConvert.begin(), [](int val) { return static_cast<size_t>(val); });
-    
     answer.totalDistance = bestDist;
-    answer.sequence = bestTourConvert;
+    answer.sequence = bestTour;
     return;
 
 }
 
 // Function to save solution to file
-void saveSolution(const string& instance, const string& method, int timeLimit, int seed, double quality, const vector<size_t>& tour) {
-    string filename = instance + " " + method + " " + to_string(timeLimit) + (method == "LS" ? " " + to_string(seed) : "") + ".sol";
+void saveSolution() {
+    string filename = settings.filename + "_" + settings.method + "_" + 
+        (settings.method == "Approx" ? "" : to_string(settings.timeLimit)) + 
+        (settings.method == "LS" ? "_" + to_string(settings.seed) : "") + 
+        ".sol";
     ofstream outFile(filename);
     
     if (outFile.is_open()) {
-        outFile << quality << "\n";
-        for (size_t i = 0; i < tour.size(); ++i) {
-            outFile << tour[i] << (i < tour.size() - 1 ? "," : "");
+        outFile << "Time Spent: " << chrono::duration<double>(chrono::system_clock::now() - settings.startTime).count() << "\n";
+        outFile << answer.totalDistance << "\n";
+        for (int i = 0; i < answer.sequence.size(); ++i) {
+            outFile << answer.sequence[i] << (i < answer.sequence.size() - 1 ? "," : "");
         }
         outFile.close();
         cout << "Solution saved to " << filename << endl;
     } else {
         cerr << "Error: Unable to open file " << filename << " for writing." << endl;
+    }
+}
+
+void printAndSaveAnswer() {
+    printf("The time taken is %f\n", chrono::duration<double>(chrono::system_clock::now() - settings.startTime).count());
+    printf("The best route distance is %f\n", answer.totalDistance);
+    printf("The sequence is: ");
+    for (auto idx : answer.sequence)
+    {
+        printf("%d, ", idx);
+    }
+    printf("\n");
+    saveSolution();
+}
+
+void signalHandler(int signal) {
+    if (signal == SIGUSR1) {
+        printf("Early termination, saving the current best solution...\n");
+        printAndSaveAnswer();
+        exit(0);
     }
 }
 
@@ -420,14 +449,16 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Missing required arguments" << endl;
         return 1;
     }
+    settings.Init(filename, method, timeLimit, seed);
+    signal(SIGUSR1, signalHandler);
     Dataset dataset = parseTSPFile(filename);
     if (method == "BF") 
     {
-        exactAlgorithm(dataset, timeLimit);        
+        exactAlgorithm(dataset);        
     } 
     else if (method == "Approx") 
     {
-        approximateAlgorithm(dataset.points);        
+        approximateAlgorithm(dataset);        
     } 
     else if (method == "LS") 
     {
@@ -438,16 +469,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error: Unknown method " << method << endl;
         return 1;
     }
-    printf("The best route distance is %f\n", answer.totalDistance);
-    printf("The sequence is: ");
-    for (auto idx : answer.sequence)
-    {
-        printf("%lu, ", idx);
-    }
-    printf("\n");
-    // TODO: Calculate the quality
-    // Save the result
-    saveSolution(filename, method, timeLimit, seed, 0, answer.sequence);
+    printAndSaveAnswer();
     
     return 0;
 }
