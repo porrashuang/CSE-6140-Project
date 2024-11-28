@@ -14,10 +14,10 @@
 #include <functional>     // For std::function
 #include <csignal>       // For signal handling
 
-const static int MAX_GENERATIONS = 500;
-const static int POPULATION_SIZE = 50;
+const static int MAX_GENERATIONS = 250;
+const static int POPULATION_SIZE = 20;
 const static double MUTATION_RATE = 0.4;
-const static double TOUR_PERCENTAGE = 0.2;
+const static double TOUR_PERCENTAGE = 0.3;
 
 using namespace std;
 // Struct for storing point data
