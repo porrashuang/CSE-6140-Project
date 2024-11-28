@@ -389,7 +389,7 @@ void saveSolution() {
     ofstream outFile(filename);
     
     if (outFile.is_open()) {
-        outFile << "Time Spent: " << chrono::duration<double>(chrono::system_clock::now() - settings.startTime).count() << "\n";
+        // outFile << "Time Spent: " << chrono::duration<double>(chrono::system_clock::now() - settings.startTime).count() << "\n";
         outFile << answer.totalDistance << "\n";
         for (int i = 0; i < answer.sequence.size(); ++i) {
             outFile << answer.sequence[i] << (i < answer.sequence.size() - 1 ? "," : "");
