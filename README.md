@@ -26,7 +26,7 @@ cd code
 
 ```bash
 cd code
-./run_program -inst DATA/Atalnta.tsp -alg LS -time 60 -seed 42
+./run_program -inst ../DATA/Atalnta.tsp -alg LS -time 60 -seed 42
 ```
 ## Build Instructions
 
