@@ -360,6 +360,8 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
                 bestTour = tour;
             }
         }
+        answer.totalDistance = bestDist;
+        answer.sequence = bestTour;
     }
     
     // last check of best tour
