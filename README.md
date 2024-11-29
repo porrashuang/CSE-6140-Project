@@ -31,7 +31,8 @@ Run the program using the following command:
 To compile the program, use the following command:
 
 ```bash
-g++ main.cpp -o tsp_solver
+cd code
+g++ main.cpp -o ../tsp_solver
 ```
 ## Caveats
 
