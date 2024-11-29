@@ -9,6 +9,7 @@ This program solves the Traveling Salesperson Problem (TSP) using different algo
 Run the program using the following command:
 
 ```bash
+cd code
 ./run_program -inst <fileName> -alg [BF|Approx|LS] -time <cut_off_in_sec> [-seed <random_seed>]
 ```
 ### Parameters
@@ -24,6 +25,7 @@ Run the program using the following command:
 ### Example
 
 ```bash
+cd code
 ./run_program -inst DATA/Atalnta.tsp -alg LS -time 60 -seed 42
 ```
 ## Build Instructions
@@ -31,6 +33,7 @@ Run the program using the following command:
 To compile the program, use the following command:
 
 ```bash
+cd code
 g++ main.cpp -o tsp_solver
 ```
 ## Caveats
