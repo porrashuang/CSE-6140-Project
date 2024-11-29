@@ -1,3 +1,28 @@
+/*
+ * This program solves the Traveling Salesman Problem (TSP) using three different approaches:
+ * 1. Exact Algorithm (BF): A brute-force method to find the shortest route among all permutations of cities.
+ * 2. Approximate Algorithm (Approx): An approximation approach based on a Minimum Spanning Tree (MST) and preorder traversal.
+ * 3. Local Search (LS): A genetic algorithm that combines selection, crossover, and mutation to optimize the tour.
+ * 
+ * Features:
+ * - Reads TSP input files with city coordinates and creates a distance matrix.
+ * - Saves results to a solution file in a specific format.
+ * - Handles early termination via signal handling (SIGUSR1).
+ * 
+ * Usage:
+ *   ./program_name -inst <filename> -alg [BF | Approx | LS] -time <cut_off> [-seed <random_seed>]
+ *   - `filename`: Input file containing city coordinates.
+ *   - `BF`: Exact brute-force algorithm.
+ *   - `Approx`: Approximation algorithm.
+ *   - `LS`: Local search using genetic algorithm (requires seed).
+ *   - `cut_off`: Time limit for execution (not applicable for Approx).
+ *   - `random_seed`: Random seed for local search (LS).
+ * 
+ * Output:
+ * - Prints the best route distance and sequence of cities.
+ * - Saves the solution to a file in the format "<filename>_<method>_<time>.sol".
+ */
+
 #include <iostream>
 #include <fstream>
 #include <sstream>

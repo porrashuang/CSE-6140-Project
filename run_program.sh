@@ -1,4 +1,11 @@
 #!/bin/bash
+# This script runs the Traveling Salesman Problem (TSP) solver program with the specified arguments,
+# waits for a specified duration, and then sends a SIGUSR1 signal to the program to trigger an early
+# termination and save the current solution. The wait time is determined by the `-time` argument passed
+# to the script.
+#
+# Usage:
+#   ./run_tsp_solver.sh -time <time_in_seconds> -inst <instance_file> -alg <algorithm> [-seed <random_seed>]
 
 # Time to wait before sending the signal (in seconds)
 WAIT_TIME=5
