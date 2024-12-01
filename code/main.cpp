@@ -351,7 +351,9 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
     for (int curGeneration = 0; curGeneration < MAX_GENERATIONS; ++curGeneration) {
         vector<vector<int>> newPopulation;
         
-        for (int i = 0; i < POPULATION_SIZE; ++i) {
+        newPopulation.push_back(population[0]);
+        
+        for (int i = 1; i < POPULATION_SIZE; ++i) {
             
             // selection of parents 
             vector<int> parent1 = tourSelect(population, dataset, rng);
@@ -378,15 +380,21 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
         // Print best tour in curGeneration
         double bestDist = calcTourDist(population[0], dataset);
         vector<int> bestTour = population[0];
-        for (const auto& tour : population) {
-            double dist = calcTourDist(tour, dataset);
+        int bestIndex = 0;
+        for (int i = 0; i < population.size(); ++i) {
+            double dist = calcTourDist(population[i], dataset);
             if (dist < bestDist) {
                 bestDist = dist;
-                bestTour = tour;
+                bestTour = population[i];
+                bestIndex = i;
             }
         }
         answer.totalDistance = bestDist;
         answer.sequence = bestTour;
+        
+        if (bestIndex != 0) {
+            swap(population[0], population[bestIndex]);
+        }
     }
     
     // last check of best tour
