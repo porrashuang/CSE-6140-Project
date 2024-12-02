@@ -24,7 +24,7 @@ Run the program using the following command:
 ### Example
 
 ```bash
-./run_program -inst DATA/Atalnta.tsp -alg LS -time 60 -seed 42
+./run_program.sh -inst ../DATA/Atlanta.tsp -alg LS -time 60 -seed 42
 ```
 ## Build Instructions
 
@@ -32,7 +32,7 @@ To compile the program, use the following command:
 
 ```bash
 cd code
-g++ main.cpp -o ../tsp_solver
+g++ main.cpp -o tsp_solver
 ```
 ## Caveats
 
