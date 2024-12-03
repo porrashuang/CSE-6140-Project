@@ -162,7 +162,9 @@ void bruteForceRecursive(int start, int end, vector<int> &sequence, const Datase
         {
             answer.totalDistance = accumulated;
             answer.sequence = sequence;
+            answer.sequence.push_back(answer.sequence[0]);
         }
+        
         return;
     }
     for (int i = start; i <= end; i++)
@@ -411,6 +413,7 @@ void localSearchAlgorithm(const Dataset& dataset, int seed) {
 
     answer.totalDistance = bestDist;
     answer.sequence = bestTour;
+    answer.sequence.push_back(answer.sequence[0]);
     return;
 
 }
