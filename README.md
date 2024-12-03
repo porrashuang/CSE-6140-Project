@@ -6,9 +6,10 @@ This program solves the Traveling Salesperson Problem (TSP) using different algo
 
 ## Usage
 
-Run the program using the following command:
+If you are using non-macOS like Linux, please see the compile instruction. For MacOS users, you can run the program using the following command:
 
 ```bash
+cd code
 ./run_program -inst <fileName> -alg [BF|Approx|LS] -time <cut_off_in_sec> [-seed <random_seed>]
 ```
 ### Parameters
@@ -24,6 +25,7 @@ Run the program using the following command:
 ### Example
 
 ```bash
+cd code
 ./run_program.sh -inst ../DATA/Atlanta.tsp -alg LS -time 60 -seed 42
 ```
 ## Build Instructions
